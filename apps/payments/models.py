@@ -8,31 +8,48 @@ from apps.groups.models.enrollment import Enrollment
 from apps.users.models.user import User
 
 
-class Payment(models.Model):
-    class Method(models.TextChoices):
-        CASH = "cash", "Cash"
-        CARD = "card", "Card"
-        TRANSFER = "transfer", "Transfer"
+class Payment(models.Model): 
+
+    METHOD_CHOICES = [
+        ('cash', 'Cash'),
+        ('card', 'Card'),
+        ('transfer', 'Transfer'),
+    ]
+
 
     enrollment = models.ForeignKey(
         Enrollment,
         on_delete=models.PROTECT,
-        related_name="payments",
+        related_name='payments',
     )
+
     amount = models.DecimalField(
         max_digits=10,
-        decimal_places=2,
-        validators=[MinValueValidator(Decimal("0.01"))],
+        decimal_places=2
     )
+
     period = models.DateField()
+
     paid_at = models.DateField()
+
     method = models.CharField(
         max_length=20,
-        choices=Method.choices,
+        choices=METHOD_CHOICES
     )
-    receipt_no = models.CharField(max_length=50, blank=True)
-    created_by = models.ForeignKey(User, on_delete=models.PROTECT)
-    created_at = models.DateTimeField(auto_now_add=True)
+
+    reciept_no = models.CharField(
+        max_length=50,
+        blank=True
+    )
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
 
     class Meta:
         indexes = [
