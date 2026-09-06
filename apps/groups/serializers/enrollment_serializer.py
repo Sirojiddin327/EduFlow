@@ -22,3 +22,40 @@ class EnrollmentSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["created_at"]
+
+    def validate_discount_percent(self, value):
+        if not 0 <= value <= 100:
+            raise serializers.ValidationError("Chegirma 0 dan 100 gacha bo'lishi kerak.")
+        return value
+
+    def validate(self, attrs):
+        if self.instance:
+            return attrs
+
+        student = attrs.get("student")
+        group = attrs.get("group")
+
+        if student and group:
+            active = Enrollment.objects.filter(
+                student=student,
+                group=group,
+                end_date__isnull=True,
+            ).exists()
+            if active:
+                raise serializers.ValidationError(
+                    "Bu o'quvchi allaqachon shu guruhda faol a'zo."
+                )
+
+            start_date = attrs.get("start_date")
+            if start_date and student and group:
+                past_active = Enrollment.objects.filter(
+                    student=student,
+                    group=group,
+                    end_date__isnull=False,
+                    end_date__gte=start_date,
+                ).exists()
+                if past_active:
+                    raise serializers.ValidationError(
+                        "Bu davr uchun allaqachon a'zolik mavjud."
+                    )
+        return attrs

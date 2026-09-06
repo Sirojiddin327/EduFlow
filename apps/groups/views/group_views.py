@@ -9,20 +9,7 @@ from rest_framework.response import Response
 from apps.groups.models import Enrollment, Group
 from apps.groups.serializers import GroupSerializer, EnrollmentSerializer
 from apps.groups.serializers.group_detail_serializer import GroupDetailSerializer
-
-
-class IsAdmin:
-    def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated and request.user.role == "admin"
-
-
-class IsAdminOrTeacher:
-    def has_permission(self, request, view):
-        return (
-            request.user
-            and request.user.is_authenticated
-            and request.user.role in ("admin", "teacher")
-        )
+from apps.users.permissions import IsAdmin, IsAdminOrTeacher
 
 
 class GroupViewSet(
