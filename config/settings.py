@@ -134,8 +134,11 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ),
-    'DEFAULT_PAGINATION_CLASS': None,
+    'DEFAULT_PAGINATION_CLASS': 'apps.users.pagination.StandardResultsPagination',
 }
+
+BOT_API_TOKEN = os.getenv('BOT_API_TOKEN', '')
+API_BASE_URL = os.getenv('API_BASE_URL', 'http://127.0.0.1:8000')
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
