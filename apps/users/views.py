@@ -6,26 +6,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.users.models import User, Student
+from apps.users.permissions import IsAdmin, IsAdminOrTeacher, IsOwnerStudent
 from apps.users.serializers import UserSerializer, StudentSerializer
-
-
-class IsAdmin:
-    def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated and request.user.role == "admin"
-
-
-class IsAdminOrTeacher:
-    def has_permission(self, request, view):
-        return (
-            request.user
-            and request.user.is_authenticated
-            and request.user.role in ("admin", "teacher")
-        )
 
 
 class UserViewSet(
     mixins.ListModelMixin,
-    mixins.CreateModelMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
@@ -37,7 +23,7 @@ class UserViewSet(
     search_fields = ["full_name", "username", "phone"]
     ordering_fields = ["full_name", "created_at"]
     ordering = ["full_name"]
-    queryset = User.objects.all()
+    queryset = User.objects.all().order_by("full_name")
 
 
 class StudentViewSet(
@@ -57,10 +43,21 @@ class StudentViewSet(
     def get_queryset(self):
         user = self.request.user
         if user.role == "teacher":
-            return Student.objects.filter(
-                enrollment__group__teacher=user
-            ).distinct()
+            return (
+                Student.objects.filter(enrollment__group__teacher=user)
+                .distinct()
+                .select_related("user")
+            )
+        if user.role == "student":
+            return Student.objects.filter(user=user).select_related("user")
         return Student.objects.select_related("user").all()
+
+    def get_permissions(self):
+        if self.action in ("create", "update", "partial_update"):
+            return [IsAdmin()]
+        if self.request.user.is_authenticated and self.request.user.role == "student":
+            return [IsAuthenticated(), IsOwnerStudent()]
+        return [IsAdminOrTeacher()]
 
 
 class MeView(APIView):
