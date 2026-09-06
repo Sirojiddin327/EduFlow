@@ -3,9 +3,24 @@ from rest_framework import mixins, viewsets
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.users.models import User, Student
 from apps.users.serializers import UserSerializer, StudentSerializer
+
+
+class IsAdmin:
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated and request.user.role == "admin"
+
+
+class IsAdminOrTeacher:
+    def has_permission(self, request, view):
+        return (
+            request.user
+            and request.user.is_authenticated
+            and request.user.role in ("admin", "teacher")
+        )
 
 
 class UserViewSet(
@@ -48,15 +63,9 @@ class StudentViewSet(
         return Student.objects.select_related("user").all()
 
 
-class IsAdmin:
-    def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated and request.user.role == "admin"
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
 
-
-class IsAdminOrTeacher:
-    def has_permission(self, request, view):
-        return (
-            request.user
-            and request.user.is_authenticated
-            and request.user.role in ("admin", "teacher")
-        )
+    def get(self, request):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)

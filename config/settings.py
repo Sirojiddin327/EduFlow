@@ -36,6 +36,7 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 # Application definition
 
 INSTALLED_APPS = [
+    'unfold',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -54,6 +55,25 @@ INSTALLED_APPS = [
     'apps.reports',
     'apps.users',
 ]
+
+
+UNFOLD = {
+    "COLORS": {
+        "primary": {
+            "50": "239 246 255",
+            "100": "219 234 254",
+            "200": "191 219 254",
+            "300": "147 197 253",
+            "400": "96 165 250",
+            "500": "59 130 246",
+            "600": "37 99 235",  
+            "700": "29 78 216",
+            "800": "30 58 138",
+            "900": "23 37 84",
+            "950": "15 23 42", 
+        },
+    },
+}
 
 
 MIDDLEWARE = [
