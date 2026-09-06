@@ -1,1 +1,1 @@
-from .attendance import Attandance
+from .attendance import Attendance
