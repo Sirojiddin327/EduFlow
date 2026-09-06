@@ -79,36 +79,39 @@ pagination `?page=2&page_size=50` (standart 20).
 ## Testlar
 
 ```bash
-# PostgreSQL o'rnatilmagan bo'lsa, sqlite bilan:
+# PostgreSQL o'rnatilmagan bo'lsa, sqlite bilan ishlatish mumkin:
+DB_ENGINE=django.db.backends.sqlite3 DB_NAME=/tmp/eduflow_test.sqlite python manage.py test
+
+# yoki tarqoq:
 DB_ENGINE=django.db.backends.sqlite3 DB_NAME=/tmp/eduflow_test.sqlite python manage.py test apps.reports
-python manage.py test apps.bot_api
 ```
 
-Qarz hisobi uchun 4 ta asosiy test + debtors pagination, bot link FSM va impersonatsiya uchun 6 ta test.
+Qarz hisobi uchun 9 ta test (to'lovsiz/bo'lib to'lash/chegirma/guruhdan chiqish/ikki guruh/oylik hisobot/
+davomat xulosasi) + rol ruxsatlari uchun 6 ta API test mavjud.
 
 ## Bot
 
 `bot/` papkasidagi aiogram 3 bot. Bot bazaga to'g'ridan-to'g'ri ulanmaydi — faqat API orqali.
-Har bir so'rov `X-Bot-Token` + `X-Telegram-Id` bilan yuboriladi; server
-`config/authentication.BotUserAuthentication` orqali so'rovni shu Telegram akkauntiga bog'langan
-User sifatida tanitadi (rol cheklovlari API tomonda ishlaydi).
+Har bir so'rov `X-Bot-Token` sarlavhasi bilan himoyalangan (`/api/bot/*` endpointlari);
+`config/authentication.IsBotToken` `.env` dagi `BOT_API_TOKEN` bilan solishtiradi.
 
 Oqimlar:
 
-1. **Bog'lash** — `/start` → `whoami` bo'lmasa telefon so'raladi → `/api/bot/link/` kod (cache 5 min) → tasdiqlash.
-2. **O'quvchi** — 💰 Mening qarzim, 🧾 to'lovlar tarixi, 📅 davomatim (30 kun, <70% ogohlantirish).
-3. **O'qituvchi** — ✅ Davomat belgilash: guruh → kun (Bugun/Kecha/boshqa) → dars topish/yaratish →
-   ⬜→✅→❌→🕐→📄 tugmalar bilan belgilash → bulk saqlash.
-4. **Admin** — 📊 Qarzdorlar (sahifali, guruh tanlash), 🔄 yangilash, 📈 oylik hisobot.
+1. **Bog'lash** — `/start` → `whoami` bo'lmasa telefon so'raladi → `/api/bot/link/` kodni qaytaradi →
+   FSM `LinkState` orqali kodni tekshirtadi (3 marta xato → qaytadan `/start`).
+2. **O'quvchi** — 💰 Mening qarzim, 🧾 to'lovlar tarixi, 📅 Mening davomatim (+ oxirgi 10 dars).
+3. **O'qituvchi** — ✅ Davomat belgilash (FSM `AttendanceState`): guruh → kun (Bugun/Kecha/boshqa) → dars topish/yaratish →
+   ⬜→✅→❌→🕐→📄 tugmalar bilan belgilash (`edit_message_reply_markup`) → bulk saqlash.
+4. **Admin** — 📊 Qarzdorlar (guruh tanlash, sahifali ◀️▶️, 🔄 yangilash, 👤 tafsilot + oxirgi 5 to'lov).
 
 ### Botni ishga tushirish
 
 ```bash
-# 1. .env da BOT_API_TOKEN (server bilan bir xil qiymat) va haqiqiy BOT_TOKEN yozilgan.
+# 1. .env da BOT_API_TOKEN va haqiqiy BOT_TOKEN to'ldirilgan.
 # 2. Django server ishlayapti: python manage.py runserver
 # 3. Bot (alohida terminal):
 source venv/bin/activate
-python -m bot.main      # bot papkasidan: python main.py
+python -m bot.main
 ```
 
 `API_BASE_URL` (masalan `http://127.0.0.1:8000`) bot serverga ulanish yo'li.
