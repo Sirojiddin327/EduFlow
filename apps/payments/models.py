@@ -25,7 +25,8 @@ class Payment(models.Model):
 
     amount = models.DecimalField(
         max_digits=10,
-        decimal_places=2
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
     )
 
     period = models.DateField()
@@ -37,7 +38,7 @@ class Payment(models.Model):
         choices=METHOD_CHOICES
     )
 
-    reciept_no = models.CharField(
+    receipt_no = models.CharField(
         max_length=50,
         blank=True
     )

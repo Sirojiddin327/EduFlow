@@ -25,32 +25,17 @@ class PaymentSerializer(serializers.ModelSerializer):
             "period",
             "paid_at",
             "method",
-            "reciept_no",
+            "receipt_no",
             "created_by",
             "created_by_full_name",
             "created_at",
         ]
-        read_only_fields = ["created_at"]
+        read_only_fields = ["created_at", "created_by"]
 
     def validate_amount(self, value):
         if value <= 0:
             raise serializers.ValidationError("To'lov miqdori 0 dan katta bo'lishi kerak.")
         return value
 
-    def validate(self, attrs):
-        enrollment = attrs.get("enrollment")
-        period = attrs.get("period", getattr(self.instance, "period", None))
-
-        if enrollment and period:
-            existing = Payment.objects.filter(
-                enrollment=enrollment,
-                period__year=period.year,
-                period__month=period.month,
-            )
-            if self.instance:
-                existing = existing.exclude(pk=self.instance.pk)
-            if existing.exists():
-                raise serializers.ValidationError(
-                    {"period": "Bu davr uchun allaqachon to'lov mavjud."}
-                )
-        return attrs
+    def validate_period(self, value):
+        return value.replace(day=1)

@@ -11,14 +11,14 @@ class PaymentAdmin(admin.ModelAdmin):
         "period",
         "paid_at",
         "method",
-        "reciept_no",
+        "receipt_no",
         "created_by",
         "created_at",
     ]
     list_filter = ["method", "period"]
     search_fields = [
         "enrollment__student__user__full_name",
-        "reciept_no",
+        "receipt_no",
     ]
     autocomplete_fields = ["enrollment", "created_by"]
     readonly_fields = ["created_at"]
