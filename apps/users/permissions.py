@@ -35,7 +35,6 @@ class IsAdminOrTeacher(BasePermission):
 
 
 class IsOwnerStudent(BasePermission):
-    """Student/attendance/payment obyektiga faqat o'z egasi (o'quvchi) kira oladi."""
 
     message = "Ushbu ma'lumot faqat o'z egasiga tegishli."
 

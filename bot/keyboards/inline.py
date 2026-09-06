@@ -89,7 +89,6 @@ def date_buttons():
 
 
 def marking_buttons(marks):
-    """Har bir o'quvchi uchun holat tugmasi + quyidagi amallar."""
     status_icons = {"": "⬜", "present": "✅", "absent": "❌", "late": "🕐", "excused": "📄"}
     rows = []
     for student_id, mark in marks.items():

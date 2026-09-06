@@ -5,7 +5,6 @@ from rest_framework.permissions import BasePermission
 
 
 class BotServiceUser:
-    """Telegram bot servis uchun maxsus soxta foydalanuvchi."""
 
     is_authenticated = True
     is_anonymous = False
@@ -15,7 +14,6 @@ class BotServiceUser:
 
 
 class BotTokenAuthentication(BaseAuthentication):
-    """X-Bot-Token sarlavhasi orqali bot servisini autentifikatsiya qiladi."""
 
     def authenticate(self, request):
         token = request.headers.get("X-Bot-Token")
@@ -28,7 +26,6 @@ class BotTokenAuthentication(BaseAuthentication):
 
 
 class IsBotToken(BasePermission):
-    """Faqat bot servisiga ruxsat beruvchi permission."""
 
     message = "Faqat bot servisiga ruxsat."
 

@@ -18,7 +18,6 @@ from apps.groups.models import Enrollment, Group
 
 
 def _monthly_expression():
-    """Bir oylik narx (chegirma bilan): monthly_price * (100 - discount) / 100."""
     return ExpressionWrapper(
         F("group__monthly_price") * (100 - F("discount_percent")) / 100,
         output_field=DecimalField(max_digits=12, decimal_places=2),
@@ -26,11 +25,6 @@ def _monthly_expression():
 
 
 def _months_expression(today=None):
-    """A'zolik davom etgan oylar soni (boshlanish va tugash oyi ikkalasi kiradi).
-
-    (tugash_yili - boshlanish_yili) * 12 + (tugash_oyi - boshlanish_oyi) + 1
-    Tugash oyi end_date bo'lmasa bugungi sana olinadi.
-    """
     today = today or timezone.localdate()
     return ExpressionWrapper(
         (
@@ -44,7 +38,6 @@ def _months_expression(today=None):
 
 
 def _expected_expression(today=None):
-    """Kutilgan summa = oylar soni * oylik narx."""
     return ExpressionWrapper(
         _months_expression(today) * _monthly_expression(),
         output_field=DecimalField(max_digits=12, decimal_places=2),
@@ -52,7 +45,6 @@ def _expected_expression(today=None):
 
 
 def debtors_queryset(min_debt=None):
-    """Qarzdor a'zoliklar: qarz = expected - paid, bitta ORM so'rovida."""
     today = timezone.localdate()
     qs = (
         Enrollment.objects.select_related("student__user", "group__teacher")
@@ -77,7 +69,6 @@ def debtors_queryset(min_debt=None):
 
 
 def student_debt(student):
-    """Bitta o'quvchining guruhlar kesimidagi qarzlari, bitta ORM so'rovida."""
     today = timezone.localdate()
     return (
         Enrollment.objects.filter(student=student)
@@ -100,7 +91,6 @@ def student_debt(student):
 
 
 def monthly_report(year, month):
-    """Oylik hisobot: guruh kesimida kutilgan, yig'ilgan va qarz summasi."""
     oy_boshi = date(year, month, 1)
     oy_oxiri = (date(year, month, 1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
 
@@ -146,7 +136,6 @@ def monthly_report(year, month):
 
 
 def attendance_summary(group_id=None, student_id=None, date_from=None, date_to=None):
-    """Guruh kesimida har bir o'quvchining davomat foizi, bitta ORM so'rovida."""
     held_q = Q(lesson__is_held=True)
     if group_id:
         held_q &= Q(lesson__group_id=group_id)

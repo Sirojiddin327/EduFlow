@@ -102,7 +102,6 @@ class DebtorTests(BaseReportTest):
         grouped = {e.student_id: e for e in student_debt(student)}
         en = grouped[student.id]
         self.assertEqual(en.monthly, Decimal("400000"))
-        # 9 oy × 400000 = 3600000, 20% chegirma bilan
         self.assertEqual(en.expected, Decimal(9 * 400000))
 
     def test_left_student_months_stops_at_exit_month(self):
@@ -139,7 +138,6 @@ class DebtorTests(BaseReportTest):
             period=date(2026, 1, 1), paid_at=timezone.localdate(),
             method="cash", created_by=self.admin,
         )
-        # Oylar: Jan-Sep = 9, Feb-Sep = 8
         grouped = {e.group_id: e for e in student_debt(student)}
         self.assertEqual(grouped[self.group.id].debt, Decimal(9 * 500000 - 500000))
         self.assertEqual(grouped[g2.id].debt, Decimal(8 * 300000))

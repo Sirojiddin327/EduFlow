@@ -13,7 +13,6 @@ PAYMENT_METHOD = {
 
 
 def format_money(value):
-    """500000.00 -> '500 000 so'm'"""
     try:
         num = int(float(value))
     except (TypeError, ValueError):
@@ -22,7 +21,6 @@ def format_money(value):
 
 
 def format_debt_message(data):
-    """O'quvchining guruhlar kesimidagi qarzi haqidagi matn."""
     lines = [f"👤 {data.get('full_name', '')}"]
     total = 0
     for e in data.get("enrollments", []):

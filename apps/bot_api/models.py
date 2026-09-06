@@ -8,7 +8,6 @@ from apps.users.models import User
 
 
 class BotLinkCode(models.Model):
-    """Telefon raqam orqali botni akkauntga bog'lash uchun tasdiqlash kodi."""
 
     user = models.OneToOneField(
         User,
@@ -30,5 +29,4 @@ class BotLinkCode(models.Model):
 
     @property
     def is_expired(self):
-        # 15 daqiqadan oshgan kod yaroqsiz.
         return (timezone.now() - self.created_at).total_seconds() > 15 * 60

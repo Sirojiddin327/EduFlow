@@ -4,7 +4,6 @@ from bot.config import API_BASE_URL, BOT_API_TOKEN
 
 
 class APIClient:
-    """Django API bilan X-Bot-Token orqali ishlaydigan oddiy aiohttp klient."""
 
     def __init__(self):
         self.base = API_BASE_URL

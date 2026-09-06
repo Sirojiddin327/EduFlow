@@ -1,0 +1,492 @@
+================================================
+  EduFlow — O'quv markazi CRM loyihasi
+  Barcha klasslar va funksiyalarning izohi
+================================================
+
+Loyiha ikki katta qismdan iborat:
+  1) Django REST Framework API (config/ va apps/)
+  2) Telegram bot (aiogram 3, bot/ papkasida)
+
+Bu fayl har bir fayl ichidagi klass/funksiya NIMA ISH
+QILISHINI tushuntiradi. Kodda barcha izohlar olib
+tashlangan, shu yerga jamlangan.
+
+
+================================================
+I. CONFIG (asosiy sozlash)
+================================================
+
+config/settings.py
+------------------
+- BASE_DIR, .env yuklash, SECRET_KEY, DEBUG, ALLOWED_HOSTS.
+- INSTALLED_APPS: django-unfold (admin), rest_framework,
+  simplejwt, django_filters, corsheaders, va barcha apps.*.
+- UNFOLD: admin panel rang sxemasi.
+- MIDDLEWARE: standart Django + CORS.
+- DATABASES: DB_ENGINE/DB_NAME/... orqali PostgreSQL yoki SQLite.
+- REST_FRAMEWORK:
+    * Autentifikatsiya: SimpleJWT (Bearer).
+    * Standart permission: IsAuthenticated.
+    * Filter backends: django-filter, search, ordering.
+    * Pagination: apps.users.pagination.StandardResultsPagination.
+- BOT_API_TOKEN, API_BASE_URL: .env'dan o'qiladi.
+- SIMPLE_JWT: access 60 daqiqa, refresh 7 kun.
+- AUTH_USER_MODEL = 'users.User'.
+- TIME_ZONE = Asia/Tashkent.
+
+config/urls.py
+--------------
+- /admin/ -> Django admin.
+- /api/ -> users, groups URL lari.
+- /api/lessons/, /api/payments/, /api/attendance/,
+  /api/reports/, /api/bot/ -> tegishli routing.
+
+config/authentication.py
+------------------------
+- BotServiceUser: bot uchun soxta (fake) foydalanuvchi —
+  is_authenticated=True, role='bot'.
+- BotTokenAuthentication: X-Bot-Token sarlavhasini settings'dagi
+  BOT_API_TOKEN bilan solishtiradi; noto'g'ri bo'lsa
+  "Yaroqsiz bot tokeni" xatosi.
+- IsBotToken: permission — faqat X-Bot-Token to'g'ri bo'lgan
+  so'rovlarga ruxsat beradi (bot endpointlarini himoyalaydi).
+
+config/asgi.py, config/wsgi.py
+------------------------------
+- ASGI/WSGI server uchun kirish nuqtalari (standart).
+
+
+================================================
+II. USERS APP (foydalanuvchilar, o'quvchilar)
+================================================
+
+models/user.py
+--------------
+- User(AbstractUser): foydalanuvchi.
+  * full_name: to'liq ism.
+  * role: 'admin' / 'student' / 'teacher' (TextChoices).
+  * phone: telefon (+998XXXXXXXXX, unique).
+  * telegram_id: bot akkauntini bog'lash (unique).
+  * created_at: avtomatik vaqti.
+  Ushbu model AUTH_USER_MODEL sifatida ishlatiladi.
+
+models/student.py
+-----------------
+- Student: o'quvchi profili.
+  * user: OneToOne -> User (har bir o'quvchi bir User hisobiga ega).
+  * birth_date, parent_name, parent_phone, address, note, created_at.
+  O'quvchi ma'lumotlari Student orqali saqlanadi.
+
+permissions.py
+--------------
+- IsAdmin: faqat role='admin' bo'lgan tasdiqlangan foydalanuvchiga
+  ruxsat.
+- IsTeacher: faqat role='teacher' ga ruxsat.
+- IsAdminOrTeacher: admin yoki teacher ruxsat beradi.
+- IsOwnerStudent: obyekt egasi tekshiruvi — admin hamma narsaga
+  kira oladi; student faqat o'z obyektiga; teacher ruxsat oladi.
+
+pagination.py
+-------------
+- StandardResultsPagination(PageNumberPagination):
+  default 20 tadan, ?page_size= orqali ko'paytirish, max 100.
+
+serializers.py
+--------------
+- UserSerializer: User modeli uchun —
+  password ni write_only qiladi, create()da parolni hash'laydi
+  (set_password), username bo'lmasa phone ishlatiladi.
+- StudentSerializer: Student + User ni birgalikda boshqaradi.
+  * full_name/phone/username -> user ga bog'langan.
+  * validate_phone: +998XXXXXXXXX format, takroriy raqamni tekshirish.
+  * create(): transaction ichida User (role=student) + Student
+    yaratadi, parolni hash'laydi.
+  * update(): User va Student maydonlarini yangilaydi.
+
+views.py
+--------
+- UserViewSet: admin foydalanuvchilar ro'yxati/detali/tahrirlash;
+  faqat IsAdmin; filter: role, is_active; search: ism, user, phone.
+- StudentViewSet: o'quvchilar CRUD.
+  * get_queryset: teacher -> o'z guruhi o'quvchilari;
+    student -> o'zi; admin -> barchasi.
+  * get_permissions: yaratish/tahrirlash faqat admin;
+    student o'zini ko'ra oladi (IsOwnerStudent).
+- MeView(APIView): GET /api/me/ — joriy foydalanuvchi ma'lumotini
+  UserSerializer bilan qaytaradi.
+
+urls.py
+-------
+- Router: /users/, /students/.
+- /auth/login/ (JWT olish), /auth/refresh/ (yangilash), /me/.
+
+
+================================================
+III. GROUPS APP (guruhlar va a'zoliklar)
+================================================
+
+models/group.py
+---------------
+- Group: o'quv guruhi.
+  * name, subject (fan), teacher (ForeignKey User, PROTECT),
+    monthly_price (oylik narx, Decimal), start_date, end_date,
+    lesson_days (dars kunlari), lesson_time, room, is_active.
+
+models/enrollment.py
+--------------------
+- Enrollment: o'quvchining guruhga a'zoligi.
+  * student, group (PROTECT), start_date, end_date,
+    discount_percent (0-100 chek).
+  * Status: active / paused / finished / dropped.
+  * UniqueConstraint(student+group+start_date),
+    CheckConstraint(end_date >= start_date),
+    index(student+group).
+
+serializers/group_serializer.py
+-------------------------------
+- GroupSerializer: Group uchun.
+  * active_students_count (read_only), teacher_full_name.
+  * validate_teacher: faqat role='teacher' qabul qiladi.
+  * validate(): end_date start_date dan oldin bo'lolmaydi.
+
+serializers/group_detail_serializer.py
+--------------------------------------
+- GroupDetailSerializer: Group + uning barcha a'zoliklari
+  (enrollments, read_only).
+
+serializers/enrollment_serializer.py
+------------------------------------
+- EnrollmentSerializer:
+  * Discount 0-100 tekshiruvi.
+  * validate(): yangi a'zolikda — o'quvchi shu guruhda faol
+    (end_date=None) a'zo bo'lsa yoki davri ustma-ust tushsa
+    xato beradi.
+
+views/group_views.py
+--------------------
+- GroupViewSet:
+  * get_queryset: active_students_count annotate qiladi;
+    teacher faqat o'z guruhini ko'radi.
+  * get_serializer_class: detail'da GroupDetailSerializer.
+  * get_permissions: yaratish/tahrirlash/o'chirish -> admin.
+  * destroy: o'chirmaydi — is_active=False qilib end_date ni
+    bugungi kunga o'rnatadi (guruhni yopadi).
+- EnrollmentViewSet: a'zoliklar.
+  * get_permissions: create/update/destroy/finish -> admin.
+  * get_queryset: teacher faqat o'z guruhlari a'zoligi.
+  * finish action: a'zolikni tugatadi (end_date=bugun,
+    status=finished).
+
+
+================================================
+IV. LESSONS APP (darslar)
+================================================
+
+models/lesson.py
+----------------
+- Lesson: dars.
+  * group (CASCADE), date, topic, is_held, cancel_reason,
+    created_by (kim yaratdi), created_at.
+  * UniqueConstraint(group+date) — bir guruhda bir kunga
+    bitta dars; index(group+date).
+
+serializers/lesson_serializer.py
+--------------------------------
+- LessonSerializer:
+  * group_name, created_by_full_name (read_only).
+  * validate_date: kelajak sanani taqiqlaydi.
+
+views/lesson_views.py
+---------------------
+- LessonViewSet:
+  * get_queryset: teacher -> o'z guruhi darslari;
+    student -> o'zi a'zo guruhlar darslari; admin -> barchasi.
+  * get_permissions: faqat admin/teacher.
+  * perform_create: teacher faqat o'z guruhingga dars
+    yarata oladi (aks holda PermissionDenied).
+  * attendance action (GET/POST /lessons/{id}/attendance/):
+      - GET: darsdagi barcha davomat ro'yxati.
+      - POST: massiv (list) qabul qiladi. Har bir yozuv
+        faqat guruhning faol o'quvchisi bo'lishi shart.
+        bulk_create(update_conflicts=True) bilan bir yo'la
+        saqlaydi va mavjud bo'lsa yangilaydi.
+
+filters.py
+----------
+- LessonFilter: group, date, date_from, date_to, is_held
+  filtrlarini taqdim etadi.
+
+
+================================================
+V. ATTENDANCE APP (davomat)
+================================================
+
+models/attendance.py
+--------------------
+- Attendance: darsdagi o'quvchi davomati.
+  * lesson (CASCADE, related_name='attendances'),
+    student (PROTECT), status:
+      present (keldi) / absent (kelmadi) /
+      late (kechikdi) / excused (sababli).
+  * comment, marked_by (kim belgiladi), marked_at.
+  * unique_together(lesson, student), index(student,status).
+  * clean(): o'quvchi shu guruhda faol a'zo bo'lmasa
+    ValidationError beradi.
+
+serializers.py
+--------------
+- AttendanceSerializer: davomat ko'rsatish —
+  student_full_name, lesson_topic, lesson_date (read_only),
+  status validatsiyasi.
+- AttendanceMarkSerializer: bitta davomat yozuvi uchun —
+  student (int), status (ChoiceField), comment (ixtiyoriy).
+  Bu bulk-belgilashda ishlatiladi.
+
+views.py
+--------
+- AttandanceViewSet: faqat ro'yxat va detali (list/retrieve).
+  * get_queryset: teacher -> o'z guruhi davomati;
+    student -> o'z davomati; admin -> barchasi.
+  * get_permissions: student o'zini ko'radi, qolganlar
+    admin/teacher.
+
+filters.py
+----------
+- AttendanceFilter: student, status, group (lesson__group),
+  date_from, date_to (lesson__date oralig'i).
+
+
+================================================
+VI. PAYMENTS APP (to'lovlar)
+================================================
+
+models.py
+---------
+- Payment: to'lov.
+  * enrollment (PROTECT, related_name='payments'),
+    amount (Decimal, 0.01 dan kam bo'lmasin),
+    period (to'langan oy, avtomatik 1-sanaga keltiriladi),
+    paid_at, method (cash/card/transfer), receipt_no,
+    created_by, created_at.
+  * save(): period ni har doim oyning 1-sanasiga keltiradi.
+  * validate_deletable(): to'lov o'tkazilgan sanadan 30 kun
+    o'tgan bo'lsa o'chirib bo'lmaydi — xato beradi.
+
+serializers.py
+--------------
+- PaymentSerializer: student_full_name, group_name,
+  created_by_full_name (read_only), amount>0 tekshiruvi,
+  period ni 1-sanaga keltirish.
+
+views.py
+--------
+- PaymentViewSet (list/create/retrieve/destroy):
+  * get_queryset: student -> faqat o'z to'lovlari.
+  * get_permissions: create/destroy -> admin;
+    qolgani IsAuthenticated.
+  * perform_create: created_by = request.user.
+  * perform_destroy: validate_deletable() dan Django xatosini
+    DRF ValidationError'ga o'giradi, keyin o'chiradi.
+
+filters.py
+----------
+- PaymentFilter: enrollment, student, group, period, method,
+  paid_at_from, paid_at_to (sana oralig'i).
+
+
+================================================
+VII. REPORTS APP (hisobotlar)
+================================================
+
+services.py — barcha hisobotlar bitta ORM so'rovida (N+1 yo'q):
+- _monthly_expression(): bir oylik narx (chegirma bilan):
+  monthly_price * (100 - discount) / 100.
+- _months_expression(): a'zolik davom etgan oylar soni
+  (tugash oyi va boshlanish oyi ikkalasi kiradi), end_date
+  bo'lmasa bugungi oy.
+- _expected_expression(): kutilgan summa = oylar soni * oylik.
+- debtors_queryset(min_debt): barcha qarzdor a'zoliklar.
+  qarz = expected - paid; qarz>0 bo'lganlar, debt bo'yicha
+  kamayuvchi.
+- student_debt(student): bitta o'quvchining guruhlar
+  kesimidagi qarzlari.
+- monthly_report(year, month): oylik hisobot —
+  har guruh uchun: collected (shu oy yig'ilgan to'lov),
+  active_students (faol o'quvchilar soni), expected,
+  debt; umumiy total'lar.
+- attendance_summary(group_id, student_id, date_from, date_to):
+  har bir o'quvchining davomat foizi — o'tkazilgan darslar,
+  present/absent/late/excused sonlari, foiz (present+late).
+
+views.py
+--------
+- DebtorsReportView (admin): GET /reports/debtors/
+  ?group=&min_debt= — qarzdorlar ro'yxati, jami qarz,
+  count. Hamma qarzdor yozuvi bitta so'rovda.
+- MonthlyReportView (admin): GET /reports/monthly/?year=&month=
+  — guruhlar bo'yicha kutilgan/yig'ilgan/qarz va umumiy
+  jamlar. collection_percent ham hisoblanadi.
+- StudentDebtReportView: GET /reports/student-debt/{id}/ —
+  bitta o'quvchining qarzi. Student boshqa o'quvchini ko'rsa
+  PermissionDenied (403).
+- AttendanceSummaryReportView (admin/teacher):
+  GET /reports/attendance-summary/?group=&student=&date_from=&date_to=
+  — davomat xulosasi. Teacher faqat o'z guruhlari ma'lumotini
+  ko'radi.
+
+serializers.py: bo'sh (hisobotlar to'g'ridan-to'g'ri dict
+  qaytariladi, alohida serializer ishlatilmaydi).
+
+
+================================================
+VIII. BOT_API APP (bot uchun API)
+================================================
+
+models.py
+---------
+- BotLinkCode: telefon orqali botni akkauntga bog'lash uchun
+  tasdiqlash kodi.
+  * user (OneToOne), code (4 xonali), attempts (urinishlar),
+    created_at (auto_now).
+  * generate_for(user): yangi tasodifiy kod yaratadi va
+    yoki yangilaydi (attempts=0).
+  * is_expired: kod 15 daqiqadan eski bo'lsa True.
+
+serializers.py
+--------------
+- BotLinkSerializer: phone (validatsiya +998...),
+  telegram_id, code (ixtiyoriy).
+- BotWhoamiSerializer: User -> id, full_name, role, phone,
+  telegram_id.
+
+views.py
+--------
+- BotLinkView (POST /api/bot/link/, IsBotToken bilan):
+  * phone va telegram_id keladi. code bo'lmasa — yangi kod
+    yaratib qaytaradi (200).
+  * Telegram akkaunt boshqaga bog'langan bo'lsa 400.
+  * code bo'lsa — tekshiradi: kodi yo'q/eski (400), 3 marta
+    xato (400), noto'g'ri (400, qolgan urinishlar soni bilan),
+    to'g'ri bo'lsa telegram_id ni User'ga yozadi, kodni
+    o'chiradi va user+role qaytaradi.
+- BotWhoamiView (GET /api/bot/whoami/?telegram_id=, IsBotToken):
+  * telegram_id ga bog'langan User qaytaradi; topilmasa 404.
+
+urls.py
+-------
+- /bot/link/, /bot/whoami/.
+
+
+================================================
+IX. TELEGRAM BOT (aiogram 3) — bot/ papkasi
+================================================
+
+bot/config.py
+-------------
+- .env ni yuklaydi, BOT_TOKEN, API_BASE_URL, BOT_API_TOKEN
+  ni o'qiydi. BOT_TOKEN bo'lmasa RuntimeError beradi.
+
+bot/main.py
+-----------
+- Bot va Dispatcher(MemoryStorage) yaratadi, barcha
+  router'larni (start/student/teacher/admin) ulaydi va
+  start_polling bilan botni ishga tushiradi.
+
+bot/services/api_client.py
+--------------------------
+- APIClient: Django API bilan ishlaydigan aiohttp klient.
+  Har doim X-Bot-Token sarlavhasini yuboradi, 10 soniya
+  timeout. Tarmoq xatosida (None, {}) qaytaradi.
+  Metodlari: whoami, link, link_with_code, groups,
+  find_lesson, create_lesson, lesson_attendance,
+  save_attendance, student_debt, my_payments,
+  attendance_summary, my_attendance, debtors.
+- api = APIClient() — global instansiya.
+
+bot/states/__init__.py
+----------------------
+- LinkState.waiting_code: bog'lashda kodni kutish holati.
+- AttendanceState: davomat FSM holatlari —
+  group, date, lesson_id, topic, marking.
+
+bot/utils/statuses.py
+---------------------
+- ATTENDANCE_STATUS: status -> emoji+so'z lug'ati.
+- STATUS_CYCLE: davomat tugmalarida almashish tartibi
+  (present -> absent -> late -> excused -> present).
+
+bot/utils/formatters.py
+-----------------------
+- format_money: '500000.00' -> '500 000 so'm'.
+- format_debt_message: o'quvchi qarzi haqida chiroyli matn.
+- format_payment_list: to'lovlar tarixi matni.
+- format_attendance_summary: davomat foizi matni.
+- format_attendance_log: oxirgi darslar davomati matni.
+- format_debtors: qarzdorlar ro'yxati matni.
+
+bot/keyboards/inline.py
+-----------------------
+- main_menu(role): rolga qarab bosh menyu tugmalari.
+- debt_actions, back_button, attendance_log_buttons.
+- group_buttons, debtors_group_buttons, date_buttons.
+- marking_buttons(marks): har o'quvchi uchun holat tugmasi
+  (⬜/✅/❌/🕐/📄), 'hammasi keldi', 'saqlash', 'bekor qilish'.
+- confirm_save: tasdiqlash tugmalari.
+- debtors_pagination: qarzdorlar sahifalash tugmalari.
+
+bot/keyboards/reply.py
+----------------------
+- phone_buttons: telefon yuborish (request_contact) tugmasi.
+
+bot/handlers/start.py
+---------------------
+- /start: whoami orqali foydalanuvchi tanilgan bo'lsa — rol
+  menyusini ko'rsatadi; aks holda telefon so'raydi.
+- phone_received (contact): telefonni olib /api/bot/link/ ga
+  yuboradi; kod qaytsa LinkState.waiting_code holatiga o'tadi.
+- code_received: kodni tekshiradi (link_with_code); 3 marta
+  xato yoki kod eskirgan bo'lsa state tozalanadi.
+- back_to_menu, cancel_flow, noop: umumiy navigatsiya.
+
+bot/handlers/student.py
+-----------------------
+- my_debt: o'quvchining qarzi (student_debt API).
+- my_payments: to'lovlar tarixi.
+- my_attendance: davomat xulosasi (attendance_summary).
+- attendance_log: oxirgi 10 dars davomati.
+  Har birida whoami orqali rol tekshiriladi (faqat student).
+
+bot/handlers/teacher.py
+-----------------------
+- mark_attendance: davomat FSM boshlaydi — guruh tanlash.
+- group_selected / date_selected / custom_date: guruh, sana.
+- topic_received: darsni topadi yoki yaratadi, davomat
+  varaqasini (marks dict) oladi, marking holatiga o'tadi.
+- toggle_student: o'quvchi holatini STATUS_CYCLE bo'yicha
+  almashadi, tugmani yangilaydi.
+- mark_all: hammaga 'present'.
+- save_attendance: belgilanmaganlar bo'lsa tasdiqlash so'raydi,
+  aks holda _do_save.
+- confirm_yes / confirm_no: tasdiqlash.
+- _do_save: payload tuzib save_attendance API'ga yuboradi,
+  natijani (necha keldi/kechikdi va h.k.) ko'rsatadi.
+
+bot/handlers/admin.py
+---------------------
+- show_debtors: 'Hamma guruhlar' tanlansa guruh tanlash
+  menyusi; guruh tanlansa /reports/debtors/ dan qarzdorlar
+  olib, sahifali tugmalar bilan ko'rsatadi.
+- debtor_detail: har qarzdorga bosilganda student_debt +
+  oxirgi 5 to'lovni ko'rsatadi.
+- Barchasi whoami orqali admin roli tekshiriladi.
+
+
+================================================
+TESTLAR
+================================================
+apps/reports/tests.py: qarz hisoblash, oylik hisobot,
+  davomat xulosasi uchun 9 ta test.
+apps/users/tests.py: rollar ruxsati uchun 6 ta API test.
+
+Jami 16 test: manage.py test
+(Git commit nominal — 17 ta commit).
