@@ -1,10 +1,10 @@
 from django.contrib import admin
 
-from apps.attendance.models import Attandance
+from apps.attendance.models import Attendance
 
 
-@admin.register(Attandance)
-class AttandanceAdmin(admin.ModelAdmin):
+@admin.register(Attendance)
+class AttendanceAdmin(admin.ModelAdmin):
     list_display = [
         "lesson",
         "student",
