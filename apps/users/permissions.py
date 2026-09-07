@@ -35,7 +35,17 @@ class IsAdminOrTeacher(BasePermission):
 
 
 class IsOwnerStudent(BasePermission):
+class IsAdminOrTeacher(BasePermission):
+    message = "Bu bo'lim faqat administrator yoki o'qituvchi uchun."
 
+    def has_permission(self, request: Request, view) -> bool:
+        return (
+            bool(request.user and request.user.is_authenticated)
+            and request.user.role in (User.Role.ADMIN, User.Role.TEACHER)
+        )
+
+    def has_object_permission(self, request: Request, view, obj) -> bool:
+        return self.has_permission(request, view)
     message = "Ushbu ma'lumot faqat o'z egasiga tegishli."
 
     def has_object_permission(self, request: Request, view, obj) -> bool:
