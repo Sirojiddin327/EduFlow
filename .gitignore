@@ -16,6 +16,9 @@ db.sqlite3
 staticfiles/
 media/
 
+# django-silk profiler output
+silk_profiles/
+
 # OS
 .DS_Store
 Thumbs.db

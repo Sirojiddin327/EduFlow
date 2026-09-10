@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'apps.payments',
     'apps.reports',
     'apps.users',
+    'silk',
 ]
 
 
@@ -68,6 +69,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "silk.middleware.SilkyMiddleware",
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -169,3 +171,21 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+
+SILKY_PYTHON_PROFILER = True
+SILKY_PYTHON_PROFILER_BINARY = False
+SILKY_PYTHON_PROFILER_FILE_PATH = BASE_DIR / 'silk_profiles'
+SILKY_MAX_RECORDED_REQUESTS = 10 ** 6
+SILKY_MAX_RECORDED_REQUESTS_CHECK_PERCENT = 10
+SILKY_META = True
+SILKY_AUTHENTICATION = False
+SILKY_AUTHORISATION = False
+
+
+def SILKY_INTERCEPT_FUNC(request):
+    if request.path.startswith('/silk/'):
+        return False
+    if DEBUG:
+        return True
+    return False

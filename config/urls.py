@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
+    path("silk/", include("silk.urls", namespace="silk")),
     path("admin/", admin.site.urls),
     path("api/", include("apps.users.urls")),
     path("api/", include("apps.groups.urls")),

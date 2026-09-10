@@ -10,4 +10,6 @@ pillow==12.3.0
 sqlparse==0.6.0
 aiogram==3.31.0
 aiohttp==3.13.1
+django-silk==5.5.2
 django-unfold==0.105.0
+faker==40.38.0

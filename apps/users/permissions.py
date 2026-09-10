@@ -30,33 +30,36 @@ class IsAdminOrTeacher(BasePermission):
     def has_permission(self, request: Request, view) -> bool:
         return (
             bool(request.user and request.user.is_authenticated)
-            and request.user.role in (User.Role.ADMIN, User.Role.TEACHER)
-        )
-
-
-class IsOwnerStudent(BasePermission):
-class IsAdminOrTeacher(BasePermission):
-    message = "Bu bo'lim faqat administrator yoki o'qituvchi uchun."
-
-    def has_permission(self, request: Request, view) -> bool:
-        return (
-            bool(request.user and request.user.is_authenticated)
-            and request.user.role in (User.Role.ADMIN, User.Role.TEACHER)
+            and request.user.role in (
+                User.Role.ADMIN,
+                User.Role.TEACHER,
+            )
         )
 
     def has_object_permission(self, request: Request, view, obj) -> bool:
         return self.has_permission(request, view)
+
+
+class IsOwnerStudent(BasePermission):
     message = "Ushbu ma'lumot faqat o'z egasiga tegishli."
 
+    def has_permission(self, request: Request, view) -> bool:
+        return bool(
+            request.user and request.user.is_authenticated
+        )
+
     def has_object_permission(self, request: Request, view, obj) -> bool:
+        # Admin hamma ma'lumotni ko'ra/ishlata oladi
         if request.user.role == User.Role.ADMIN:
             return True
-        if request.user.role == User.Role.TEACHER:
-            return IsAdminOrTeacher.has_permission(self, request, view) or True
+
+        # Student faqat o'ziga tegishli ma'lumotni ko'radi
         student = getattr(obj, "student", None)
+
         if student is not None:
             return student.user_id == request.user.id
-        return obj.user_id == request.user.id
 
-    def has_permission(self, request: Request, view) -> bool:
-        return bool(request.user and request.user.is_authenticated)
+        # Agar obyektning o'zi user_id orqali bog'langan bo'lsa
+        user_id = getattr(obj, "user_id", None)
+
+        return user_id == request.user.id
