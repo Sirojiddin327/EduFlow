@@ -30,14 +30,19 @@ class IsAdminOrTeacher(BasePermission):
     def has_permission(self, request: Request, view) -> bool:
         return (
             bool(request.user and request.user.is_authenticated)
+<<<<<<< HEAD
             and request.user.role in (
                 User.Role.ADMIN,
                 User.Role.TEACHER,
             )
+=======
+            and request.user.role in (User.Role.ADMIN, User.Role.TEACHER)
+>>>>>>> ba3b7bf (Configure static root)
         )
 
     def has_object_permission(self, request: Request, view, obj) -> bool:
         return self.has_permission(request, view)
+
 
 
 class IsOwnerStudent(BasePermission):
@@ -51,6 +56,10 @@ class IsOwnerStudent(BasePermission):
     def has_object_permission(self, request: Request, view, obj) -> bool:
         # Admin hamma ma'lumotni ko'ra/ishlata oladi
         if request.user.role == User.Role.ADMIN:
+            return True
+
+        # Teacher hamma ma'lumotni ko'ra/ishlata oladi
+        if request.user.role == User.Role.TEACHER:
             return True
 
         # Student faqat o'ziga tegishli ma'lumotni ko'radi
