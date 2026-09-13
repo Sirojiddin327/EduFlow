@@ -108,6 +108,7 @@ DATABASES = {
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'config.authentication.BotTokenAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
@@ -173,7 +174,7 @@ MAILERS = {
 }
 
 
-SILKY_PYTHON_PROFILER = True
+SILKY_PYTHON_PROFILER = False
 SILKY_PYTHON_PROFILER_BINARY = False
 SILKY_PYTHON_PROFILER_FILE_PATH = BASE_DIR / 'silk_profiles'
 SILKY_MAX_RECORDED_REQUESTS = 10 ** 6
@@ -189,3 +190,7 @@ def SILKY_INTERCEPT_FUNC(request):
     if DEBUG:
         return True
     return False
+
+
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
