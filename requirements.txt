@@ -13,3 +13,5 @@ aiohttp==3.13.1
 django-silk==5.5.2
 django-unfold==0.105.0
 faker==40.38.0
+django-redis==5.4.0
+redis==5.0.8

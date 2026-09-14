@@ -11,7 +11,7 @@ class Group(models.Model):
                     )
     start_date = models.DateField()
     end_date = models.DateField(null=True)
-    lesson_days = models.CharField(max_length=20)
+    lesson_days = models.CharField(max_length=100)
     lesson_time = models.TimeField()
     room = models.CharField(max_length=30)
     is_active = models.BooleanField(default=True)

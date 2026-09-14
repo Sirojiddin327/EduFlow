@@ -20,9 +20,9 @@ def normalize_phone(raw: str) -> str:
 
 def role_menu_text(role):
     titles = {
-        "student": "🎓 O'quvchi menyusi",
-        "teacher": "👨‍🏫 O'qituvchi menyusi",
-        "admin": "🛡 Administrator menyusi",
+        "student": "O'quvchi menyusi",
+        "teacher": "O'qituvchi menyusi",
+        "admin": "Administrator menyusi",
     }
     return titles.get(role, "Menyu")
 
@@ -33,13 +33,13 @@ async def cmd_start(message: types.Message, state: FSMContext):
     status, data = await api.whoami(message.from_user.id)
     if status == 200:
         await message.answer(
-            f"Xush kelibsiz, {data['full_name']}! 👋\n\n{role_menu_text(data['role'])}",
+            f"Xush kelibsiz, {data['full_name']}!\n\n{role_menu_text(data['role'])}",
             reply_markup=main_menu(data["role"]),
         )
         return
 
     await message.answer(
-        "Salom! Sizni tanimadim. 📱 Telefon raqamingizni yuboring.\n"
+        "Salom! Sizni tanimadim. Telefon raqamingizni yuboring.\n"
         "Raqam tizimda +998XXXXXXXXX ko'rinishida saqlangan bo'lishi kerak.",
         reply_markup=phone_buttons(),
     )
@@ -63,12 +63,12 @@ async def phone_received(message: types.Message, state: FSMContext):
         return
     if status == 404:
         await message.answer(
-            "❌ Bu raqam tizimda yo'q. Administratorga murojaat qiling.",
+            "Bu raqam tizimda yo'q. Administratorga murojaat qiling.",
             reply_markup=types.ReplyKeyboardRemove(),
         )
         return
 
-    await message.answer("🛑 Server javob bermayapti, birozdan keyin urinib ko'ring.")
+    await message.answer("Server javob bermayapti, birozdan keyin urinib ko'ring.")
 
 
 @router.message(LinkState.waiting_code, F.text)
@@ -82,7 +82,7 @@ async def code_received(message: types.Message, state: FSMContext):
         role = data.get("role")
         user = data.get("user", {})
         await message.answer(
-            f"✅ Akkaunt bog'landi. Xush kelibsiz, {user.get('full_name', '')}!\n\n"
+            f"Akkaunt bog'landi. Xush kelibsiz, {user.get('full_name', '')}!\n\n"
             f"{role_menu_text(role)}",
             reply_markup=main_menu(role),
         )
@@ -91,10 +91,10 @@ async def code_received(message: types.Message, state: FSMContext):
     detail = data.get("detail", "Kod noto'g'ri.")
     if "3 marta" in detail or "muddati" in detail:
         await state.clear()
-        await message.answer(f"❌ {detail}\nQaytadan /start bosing.")
+        await message.answer(f"{detail}\nQaytadan /start bosing.")
         return
 
-    await message.answer(f"❌ {detail}")
+    await message.answer(f"{detail}")
 
 
 @router.callback_query(F.data == "back_menu")
@@ -113,7 +113,7 @@ async def back_to_menu(callback: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "cancel")
 async def cancel_flow(callback: types.CallbackQuery, state: FSMContext):
     await state.clear()
-    await callback.message.edit_text("Bekor qilindi. ❌")
+    await callback.message.edit_text("Bekor qilindi. ")
     await back_to_menu(callback, state)
 
 

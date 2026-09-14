@@ -96,14 +96,14 @@ async def topic_received(message: types.Message, state: FSMContext):
     if not lesson:
         status, created = await api.create_lesson(group_id, date_iso, message.text.strip())
         if status != 201:
-            return await message.answer("🛑 Dars yaratib bo'lmadi. Qaytadan urinib ko'ring.")
+            return await message.answer("Dars yaratib bo'lmadi. Qaytadan urinib ko'ring.")
         lesson = created
 
     await state.update_data(lesson_id=lesson["id"])
 
     status, sheet = await api.lesson_attendance(lesson["id"])
     if status != 200:
-        return await message.answer("🛑 Davomat varaqasini olib bo'lmadi.")
+        return await message.answer("Davomat varaqasini olib bo'lmadi.")
 
     marks = {}
     for i, item in enumerate(sheet, start=1):
@@ -186,7 +186,7 @@ async def _do_save(callback: types.CallbackQuery, state: FSMContext):
     status, resp = await api.save_attendance(lesson_id, payload)
     if status != 200:
         return await callback.message.answer(
-            "🛑 Saqlashda xatolik. Birozdan keyin urinib ko'ring."
+            "Saqlashda xatolik. Birozdan keyin urinib ko'ring."
         )
 
     counts = {}
@@ -202,6 +202,6 @@ async def _do_save(callback: types.CallbackQuery, state: FSMContext):
     await state.clear()
     me = await _whoami_or_none(callback.from_user.id)
     await callback.message.answer(
-        f"✅ Saqlandi: {', '.join(parts)}" if parts else "✅ Saqlandi.",
+        f"Saqlandi: {', '.join(parts)}" if parts else "Saqlandi.",
         reply_markup=main_menu(me["role"]) if me else None,
     )

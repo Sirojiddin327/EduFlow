@@ -105,6 +105,34 @@ DATABASES = {
 }
 
 
+# Redis
+REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
+REDIS_PORT = os.getenv('REDIS_PORT', '6379')
+REDIS_DB = os.getenv('REDIS_DB', '0')
+REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', '')
+
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        },
+    }
+}
+
+REDIS_PASSWORD_OPTS = {}
+if REDIS_PASSWORD:
+    REDIS_PASSWORD_OPTS['PASSWORD'] = REDIS_PASSWORD
+CACHES['default']['OPTIONS'].update(REDIS_PASSWORD_OPTS)
+
+
+# Session storage in Redis
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'default'
+
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',

@@ -4,10 +4,16 @@ from rest_framework.request import Request
 from apps.users.models import User
 
 
+def _is_bot(request: Request) -> bool:
+    return getattr(request.user, "role", None) == "bot"
+
+
 class IsAdmin(BasePermission):
     message = "Bu amal faqat administrator uchun."
 
     def has_permission(self, request: Request, view) -> bool:
+        if _is_bot(request):
+            return True
         return (
             bool(request.user and request.user.is_authenticated)
             and request.user.role == User.Role.ADMIN
@@ -18,6 +24,8 @@ class IsTeacher(BasePermission):
     message = "Bu bo'lim faqat o'qituvchi uchun."
 
     def has_permission(self, request: Request, view) -> bool:
+        if _is_bot(request):
+            return True
         return (
             bool(request.user and request.user.is_authenticated)
             and request.user.role == User.Role.TEACHER
@@ -28,6 +36,8 @@ class IsAdminOrTeacher(BasePermission):
     message = "Bu bo'lim faqat administrator yoki o'qituvchi uchun."
 
     def has_permission(self, request: Request, view) -> bool:
+        if _is_bot(request):
+            return True
         return (
             bool(request.user and request.user.is_authenticated)
 <<<<<<< HEAD

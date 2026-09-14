@@ -32,7 +32,7 @@ async def my_debt(callback: types.CallbackQuery):
 
     status, data = await api.student_debt(me["id"])
     if status != 200:
-        return await callback.message.answer("🛑 Server javob bermayapti, birozdan keyin urinib ko'ring.")
+        return await callback.message.answer("Server javob bermayapti, birozdan keyin urinib ko'ring.")
     await callback.message.edit_text(
         format_debt_message(data), reply_markup=debt_actions()
     )
@@ -46,7 +46,7 @@ async def my_payments(callback: types.CallbackQuery):
 
     status, data = await api.my_payments(me["id"])
     if status != 200:
-        return await callback.message.answer("🛑 Server javob bermayapti, birozdan keyin urinib ko'ring.")
+        return await callback.message.answer("Server javob bermayapti, birozdan keyin urinib ko'ring.")
     payments = data.get("results") if isinstance(data, dict) else []
     await callback.message.edit_text(
         format_payment_list(payments), reply_markup=debt_actions()
@@ -61,7 +61,7 @@ async def my_attendance(callback: types.CallbackQuery):
 
     status, data = await api.attendance_summary(me["id"])
     if status != 200:
-        return await callback.message.answer("🛑 Server javob bermayapti, birozdan keyin urinib ko'ring.")
+        return await callback.message.answer("Server javob bermayapti, birozdan keyin urinib ko'ring.")
     await callback.message.edit_text(
         format_attendance_summary(data), reply_markup=attendance_log_buttons()
     )
@@ -75,7 +75,7 @@ async def attendance_log(callback: types.CallbackQuery):
 
     status, data = await api.my_attendance(me["id"])
     if status != 200:
-        return await callback.message.answer("🛑 Server javob bermayapti, birozdan keyin urinib ko'ring.")
+        return await callback.message.answer("Server javob bermayapti, birozdan keyin urinib ko'ring.")
     rows = data.get("results") if isinstance(data, dict) else []
     await callback.message.edit_text(
         format_attendance_log(rows), reply_markup=back_button()

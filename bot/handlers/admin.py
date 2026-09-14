@@ -28,19 +28,19 @@ def _debtor_keyboard(debtors, group_id, page, total_pages):
     builder = InlineKeyboardBuilder()
     for d in debtors:
         builder.button(
-            text=f"👤 {d['full_name']} — {d['debt']} so'm",
+            text=f"{d['full_name']} — {d['debt']} so'm",
             callback_data=f"debtor_detail:{d['student_id']}",
         )
     nav = []
     if page > 1:
-        nav.append(builder.button(text="◀️", callback_data=f"debtors:{group_id}:{page-1}"))
+        nav.append(builder.button(text="Avvalgi", callback_data=f"debtors:{group_id}:{page-1}"))
     nav.append(builder.button(text=f"{page}/{total_pages}", callback_data="noop"))
     if page < total_pages:
-        nav.append(builder.button(text="▶️", callback_data=f"debtors:{group_id}:{page+1}"))
+        nav.append(builder.button(text="Keyingi", callback_data=f"debtors:{group_id}:{page+1}"))
     builder.button(
-        text="🔄 Yangilash", callback_data=f"debtors:{group_id}:{page}"
+        text="Yangilash", callback_data=f"debtors:{group_id}:{page}"
     )
-    builder.button(text="◀️ Orqaga", callback_data="back_menu")
+    builder.button(text="Orqaga", callback_data="back_menu")
     builder.adjust(1)
     return builder.as_markup()
 
@@ -60,7 +60,7 @@ async def show_debtors(callback: types.CallbackQuery):
     if group_id is None:
         status, data = await api.groups()
         if status != 200:
-            return await callback.message.answer("🛑 Server javob bermayapti.")
+            return await callback.message.answer("Server javob bermayapti.")
         groups = data.get("results") if isinstance(data, dict) else []
         active = [g for g in groups if g.get("is_active")]
         return await callback.message.edit_text(
@@ -69,7 +69,7 @@ async def show_debtors(callback: types.CallbackQuery):
 
     status, data = await api.debtors(group_id=group_id, page=1, page_size=100)
     if status != 200:
-        return await callback.message.answer("🛑 Server javob bermayapti.")
+        return await callback.message.answer("Server javob bermayapti.")
 
     debtors = data.get("debtors", [])
     total_pages = max(1, (len(debtors) + PAGE_SIZE - 1) // PAGE_SIZE)
@@ -77,7 +77,7 @@ async def show_debtors(callback: types.CallbackQuery):
     chunk = debtors[(page - 1) * PAGE_SIZE : page * PAGE_SIZE]
 
     group_name = chunk[0]["group_name"] if chunk else f"Guruh #{group_id}"
-    title = f"🔴 Qarzdorlar — {group_name}"
+    title = f"Qarzdorlar — {group_name}"
     text = format_debtors(
         {"debtors": chunk, "total_debt": data.get("total_debt", 0)}, title
     )
@@ -98,7 +98,7 @@ async def debtor_detail(callback: types.CallbackQuery):
     student_id = int(callback.data.split(":")[1])
     status, data = await api.student_debt(student_id)
     if status != 200:
-        return await callback.message.answer("🛑 Ma'lumot olinmadi.")
+        return await callback.message.answer("Ma'lumot olinmadi.")
 
     text = format_debt_message(data)
 
