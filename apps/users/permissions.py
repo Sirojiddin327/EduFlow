@@ -40,14 +40,10 @@ class IsAdminOrTeacher(BasePermission):
             return True
         return (
             bool(request.user and request.user.is_authenticated)
-<<<<<<< HEAD
             and request.user.role in (
                 User.Role.ADMIN,
                 User.Role.TEACHER,
             )
-=======
-            and request.user.role in (User.Role.ADMIN, User.Role.TEACHER)
->>>>>>> ba3b7bf (Configure static root)
         )
 
     def has_object_permission(self, request: Request, view, obj) -> bool:
